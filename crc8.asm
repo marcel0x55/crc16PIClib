@@ -1,0 +1,115 @@
+; TODO INSERT CONFIG CODE HERE USING CONFIG BITS GENERATOR
+#include "p16f690.inc"
+
+; CONFIG
+; __config 0x30D4
+ __CONFIG _FOSC_INTRCIO & _WDTE_OFF & _PWRTE_OFF & _MCLRE_OFF & _CP_OFF & _CPD_OFF & _BOREN_OFF & _IESO_OFF & _FCMEN_OFF
+
+;CONSTS
+POLY EQU 0X07   ;CRC8 POLYNOMIAL VALUE
+ 
+INIT EQU 0X00   ;CRCSUM INIT VALUE
+ 
+
+ 
+;VARS
+BITLOOPVAR EQU 0X20
+CRCSUM EQU 0X21 ;    GET THE CRC-8 SUM HERE
+CRCDAT EQU 0X22 ;n BYTES (CAN BE SPECIFIED AT RUNTIME)    PUT THE DATA HERE
+
+
+ 
+ORG 0X0000
+;RES_VECT  CODE    0x0000            ; processor reset vector
+    GOTO    START                   ; go to beginning of program
+
+; TODO ADD INTERRUPTS HERE IF USED
+
+;MAIN_PROG CODE                      ; let linker place main program
+
+START
+    
+    ;+--------------+
+    ;| CRC SUM DEMO |
+    ;+--------------+
+    
+    ;PUT THE DATA INTO CRCDAT IN REVERSE ORDER (helloPIC -> CIPolleh (CRCDAT = 'h', CRCDAT+7 = 'C' -> CRCDAT = 'C', CRCDAT+7 = 'h'))
+    
+    MOVLW 0X43
+    MOVWF CRCDAT
+    
+    MOVLW 0X49
+    MOVWF CRCDAT+1
+    
+    MOVLW 0X50
+    MOVWF CRCDAT+2
+    
+    MOVLW 0X6F
+    MOVWF CRCDAT+3
+    
+    MOVLW 0X6C
+    MOVWF CRCDAT+4
+    
+    MOVLW 0X6C
+    MOVWF CRCDAT+5
+    
+    MOVLW 0X65
+    MOVWF CRCDAT+6
+    
+    MOVLW 0X68
+    MOVWF CRCDAT+7
+    
+    
+    MOVLW 0X07 ;WE HAVE 8 BYTES TO COMPUTE CRC FOR
+    CALL CRC8
+    
+    ;GET THE CHECKSUM IN CRCSUM
+ 
+LOOP:
+
+    GOTO LOOP                          ; loop forever
+
+CRC8:
+    ADDLW CRCDAT
+    MOVWF FSR
+    
+    MOVLW INIT
+    MOVWF CRCSUM
+    
+BYTELOOP:
+    MOVF INDF,W
+    XORWF CRCSUM,F
+    CALL PROCESSBITS
+    DECF FSR,W
+    MOVWF FSR
+    SUBLW CRCDAT-1
+    BTFSS STATUS,Z
+    GOTO BYTELOOP
+    
+    RETURN
+
+PROCESSBITS:   
+    MOVLW 0X08
+    MOVWF BITLOOPVAR
+BITLOOP:
+    BTFSS CRCSUM,7
+    GOTO MSBC
+    
+    BCF STATUS,C
+    RLF CRCSUM,F
+    
+    MOVLW POLY
+    XORWF CRCSUM,F
+    
+    GOTO DONEMSBS
+    
+MSBC:
+    BCF STATUS,C
+    RLF CRCSUM,F
+
+DONEMSBS:
+    DECFSZ BITLOOPVAR,F
+    GOTO BITLOOP
+    RETURN
+    
+    END
