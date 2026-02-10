@@ -1,4 +1,4 @@
-# crc16PIClib
+# crcPIClib
 A CRC-16/CCITT-FALSE and CRC-8/SMBUS implementation for PIC MCUs.
 
 # License
